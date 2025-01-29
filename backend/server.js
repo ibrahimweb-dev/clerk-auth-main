@@ -28,32 +28,25 @@ app.post(
       const evt = wh.verify(payloadString, svixHeaders);
 
       const { id, ...attributes } = evt.data;
-
       const eventType = evt.type;
+
+      // Send response immediately to avoid timeout
+      res.status(200).json({
+        success: true,
+        message: 'Webhook received',
+      });
 
       if (eventType === 'user.created') {
         const firstName = attributes.first_name;
         const lastName = attributes.last_name;
 
-        console.log(firstName);
+        console.log(`User ${id} received: ${firstName} ${lastName}`);
 
-        const user = new User({
-          clerkUserId: id,
-          firstName: firstName,
-          lastName: lastName,
-        });
-
-        await user.save();
-        console.log('User is created');
-        // console.log(`User ${id} is ${eventType}`);
-        // console.log(attributes);
+        // Process user creation in the background
+        saveUserToDB(id, firstName, lastName);
       }
-
-      res.status(200).json({
-        success: true,
-        message: 'Webhook received',
-      });
     } catch (err) {
+      console.error('Webhook verification failed:', err.message);
       res.status(400).json({
         success: false,
         message: err.message,
@@ -62,8 +55,23 @@ app.post(
   }
 );
 
+// Background function to save user data
+async function saveUserToDB(id, firstName, lastName) {
+  try {
+    const user = new User({
+      clerkUserId: id,
+      firstName: firstName,
+      lastName: lastName,
+    });
+    await user.save();
+    console.log('User successfully saved to database');
+  } catch (err) {
+    console.error('Error saving user:', err.message);
+  }
+}
+
 const port = process.env.PORT || 7000;
 
 app.listen(port, () => {
-  console.log(`listening on port ${port}`);
+  console.log(`Listening on port ${port}`);
 });
