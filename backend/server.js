@@ -58,17 +58,34 @@ app.post(
 // Background function to save user data
 async function saveUserToDB(id, firstName, lastName) {
   try {
+    console.log('✅ Attempting to save user:', { id, firstName, lastName });
+
+    if (!mongoose.connection.readyState) {
+      console.error('❌ Database is not connected.');
+      return;
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ clerkUserId: id });
+    if (existingUser) {
+      console.log('⚠️ User already exists:', existingUser);
+      return;
+    }
+
+    // Save user
     const user = new User({
       clerkUserId: id,
-      firstName: firstName,
-      lastName: lastName,
+      firstName: firstName || 'Unknown',
+      lastName: lastName || 'Unknown',
     });
+
     await user.save();
-    console.log('User successfully saved to database');
+    console.log('✅ User successfully saved to database');
   } catch (err) {
-    console.error('Error saving user:', err.message);
+    console.error('❌ Error saving user:', err.message);
   }
 }
+
 
 const port = process.env.PORT || 7000;
 
